@@ -254,125 +254,125 @@ def evaluate(data_loader, model, sents):
     return scores
 
 
+if __name__ == '__main__':
+    # initialization
+    args = init_args()
+    print("\n", "="*30, f"NEW EXP: ASQP on {args.dataset}", "="*30, "\n")
 
-# initialization
-args = init_args()
-print("\n", "="*30, f"NEW EXP: ASQP on {args.dataset}", "="*30, "\n")
-
-# sanity check
-# show one sample to check the code and the expected output
-tokenizer = T5Tokenizer.from_pretrained(args.model_name_or_path)
-print(f"Here is an example (from the dev set):")
-dataset = ABSADataset(tokenizer=tokenizer, data_dir=args.dataset, 
-                      data_type='dev', max_len=args.max_seq_length)
-data_sample = dataset[7]  # a random data sample
-print('Input :', tokenizer.decode(data_sample['source_ids'], skip_special_tokens=True))
-print('Output:', tokenizer.decode(data_sample['target_ids'], skip_special_tokens=True))
-
-
-# training process
-if args.do_train:
-    print("\n****** Conduct Training ******")
-
-    # initialize the T5 model
-    tfm_model = T5ForConditionalGeneration.from_pretrained(args.model_name_or_path)
-    model = T5FineTuner(args, tfm_model, tokenizer)
-
-    # checkpoint_callback = pl.callbacks.ModelCheckpoint(
-    #     filepath=args.output_dir, prefix="ckt", monitor='val_loss', mode='min', save_top_k=3
-    # )
-
-    # prepare for trainer
-    train_params = dict(
-        default_root_dir=args.output_dir,
-        accumulate_grad_batches=args.gradient_accumulation_steps,
-        gpus=args.n_gpu,
-        gradient_clip_val=1.0,
-        max_epochs=args.num_train_epochs,
-        callbacks=[LoggingCallback()],
-    )
-
-    trainer = pl.Trainer(**train_params)
-    trainer.fit(model)
-
-    # save the final model
-    # model.model.save_pretrained(args.output_dir)
-    # tokenizer.save_pretrained(args.output_dir)
-
-    print("Finish training and saving the model!")
+    # sanity check
+    # show one sample to check the code and the expected output
+    tokenizer = T5Tokenizer.from_pretrained(args.model_name_or_path)
+    print(f"Here is an example (from the dev set):")
+    dataset = ABSADataset(tokenizer=tokenizer, data_dir=args.dataset, 
+                        data_type='dev', max_len=args.max_seq_length)
+    data_sample = dataset[7]  # a random data sample
+    print('Input :', tokenizer.decode(data_sample['source_ids'], skip_special_tokens=True))
+    print('Output:', tokenizer.decode(data_sample['target_ids'], skip_special_tokens=True))
 
 
-# evaluation
-if args.do_direct_eval:
-    print("\n****** Conduct Evaluating with the last state ******")
+    # training process
+    if args.do_train:
+        print("\n****** Conduct Training ******")
 
-    # model = T5FineTuner(args)
+        # initialize the T5 model
+        tfm_model = T5ForConditionalGeneration.from_pretrained(args.model_name_or_path)
+        model = T5FineTuner(args, tfm_model, tokenizer)
 
-    # print("Reload the model")
-    # model.model.from_pretrained(args.output_dir)
+        # checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        #     filepath=args.output_dir, prefix="ckt", monitor='val_loss', mode='min', save_top_k=3
+        # )
 
-    sents, _ = read_line_examples_from_file(f'data/{args.dataset}/test.txt')
+        # prepare for trainer
+        train_params = dict(
+            default_root_dir=args.output_dir,
+            accumulate_grad_batches=args.gradient_accumulation_steps,
+            gpus=args.n_gpu,
+            gradient_clip_val=1.0,
+            max_epochs=args.num_train_epochs,
+            callbacks=[LoggingCallback()],
+        )
 
-    print()
-    test_dataset = ABSADataset(tokenizer, data_dir=args.dataset, 
-                               data_type='test', max_len=args.max_seq_length)
-    test_loader = DataLoader(test_dataset, batch_size=32, num_workers=4)
-    # print(test_loader.device)
+        trainer = pl.Trainer(**train_params)
+        trainer.fit(model)
 
-    # compute the performance scores
-    scores = evaluate(test_loader, model, sents)
+        # save the final model
+        # model.model.save_pretrained(args.output_dir)
+        # tokenizer.save_pretrained(args.output_dir)
 
-    # write to file
-    log_file_path = f"results_log/{args.dataset}.txt"
-    local_time = time.asctime(time.localtime(time.time()))
-
-    exp_settings = f"Datset={args.dataset}; Train bs={args.train_batch_size}, num_epochs = {args.num_train_epochs}"
-    exp_results = f"F1 = {scores['f1']:.4f}"
-
-    log_str = f'============================================================\n'
-    log_str += f"{local_time}\n{exp_settings}\n{exp_results}\n\n"
-
-    if not os.path.exists('./results_log'):
-        os.mkdir('./results_log')
-
-    with open(log_file_path, "a+") as f:
-        f.write(log_str)
+        print("Finish training and saving the model!")
 
 
-if args.do_inference:
-    print("\n****** Conduct inference on trained checkpoint ******")
+    # evaluation
+    if args.do_direct_eval:
+        print("\n****** Conduct Evaluating with the last state ******")
 
-    # initialize the T5 model from previous checkpoint
-    print(f"Load trained model from {args.output_dir}")
-    print('Note that a pretrained model is required and `do_true` should be False')
-    tokenizer = T5Tokenizer.from_pretrained(args.output_dir)
-    tfm_model = T5ForConditionalGeneration.from_pretrained(args.output_dir)
+        # model = T5FineTuner(args)
 
-    model = T5FineTuner(args, tfm_model, tokenizer)
+        # print("Reload the model")
+        # model.model.from_pretrained(args.output_dir)
 
-    sents, _ = read_line_examples_from_file(f'data/{args.dataset}/test.txt')
+        sents, _ = read_line_examples_from_file(f'data/{args.dataset}/test.txt')
 
-    print()
-    test_dataset = ABSADataset(tokenizer, data_dir=args.dataset, 
-                               data_type='test', max_len=args.max_seq_length)
-    test_loader = DataLoader(test_dataset, batch_size=32, num_workers=4)
-    # print(test_loader.device)
+        print()
+        test_dataset = ABSADataset(tokenizer, data_dir=args.dataset, 
+                                data_type='test', max_len=args.max_seq_length)
+        test_loader = DataLoader(test_dataset, batch_size=32, num_workers=4)
+        # print(test_loader.device)
 
-    # compute the performance scores
-    scores = evaluate(test_loader, model, sents)
+        # compute the performance scores
+        scores = evaluate(test_loader, model, sents)
 
-    # write to file
-    log_file_path = f"results_log/{args.dataset}.txt"
-    local_time = time.asctime(time.localtime(time.time()))
+        # write to file
+        log_file_path = f"results_log/{args.dataset}.txt"
+        local_time = time.asctime(time.localtime(time.time()))
 
-    exp_settings = f"Datset={args.dataset}; Train bs={args.train_batch_size}, num_epochs = {args.num_train_epochs}"
-    exp_results = f"F1 = {scores['f1']:.4f}"
+        exp_settings = f"Datset={args.dataset}; Train bs={args.train_batch_size}, num_epochs = {args.num_train_epochs}"
+        exp_results = f"F1 = {scores['f1']:.4f}"
 
-    log_str = f'============================================================\n'
-    log_str += f"{local_time}\n{exp_settings}\n{exp_results}\n\n"
+        log_str = f'============================================================\n'
+        log_str += f"{local_time}\n{exp_settings}\n{exp_results}\n\n"
 
-    if not os.path.exists('./results_log'):
-        os.mkdir('./results_log')
+        if not os.path.exists('./results_log'):
+            os.mkdir('./results_log')
 
-    with open(log_file_path, "a+") as f:
-        f.write(log_str)
+        with open(log_file_path, "a+") as f:
+            f.write(log_str)
+
+
+    if args.do_inference:
+        print("\n****** Conduct inference on trained checkpoint ******")
+
+        # initialize the T5 model from previous checkpoint
+        print(f"Load trained model from {args.output_dir}")
+        print('Note that a pretrained model is required and `do_true` should be False')
+        tokenizer = T5Tokenizer.from_pretrained(args.output_dir)
+        tfm_model = T5ForConditionalGeneration.from_pretrained(args.output_dir)
+
+        model = T5FineTuner(args, tfm_model, tokenizer)
+
+        sents, _ = read_line_examples_from_file(f'data/{args.dataset}/test.txt')
+
+        print()
+        test_dataset = ABSADataset(tokenizer, data_dir=args.dataset, 
+                                data_type='test', max_len=args.max_seq_length)
+        test_loader = DataLoader(test_dataset, batch_size=32, num_workers=4)
+        # print(test_loader.device)
+
+        # compute the performance scores
+        scores = evaluate(test_loader, model, sents)
+
+        # write to file
+        log_file_path = f"results_log/{args.dataset}.txt"
+        local_time = time.asctime(time.localtime(time.time()))
+
+        exp_settings = f"Datset={args.dataset}; Train bs={args.train_batch_size}, num_epochs = {args.num_train_epochs}"
+        exp_results = f"F1 = {scores['f1']:.4f}"
+
+        log_str = f'============================================================\n'
+        log_str += f"{local_time}\n{exp_settings}\n{exp_results}\n\n"
+
+        if not os.path.exists('./results_log'):
+            os.mkdir('./results_log')
+
+        with open(log_file_path, "a+") as f:
+            f.write(log_str)
