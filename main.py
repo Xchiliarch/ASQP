@@ -11,7 +11,6 @@ import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
-from pytorch_lightning.loggers import TensorBoardLogger
 
 from transformers import AdamW, T5ForConditionalGeneration, T5Tokenizer
 # from transformers import BertTokenizer, EncoderDecoderModel
@@ -23,7 +22,6 @@ from eval_utils import compute_scores
 
 
 logger = logging.getLogger(__name__)
-Tlogger = TensorBoardLogger('tb_logs',name='ASQP')
 
 def init_args():
     parser = argparse.ArgumentParser()
@@ -123,7 +121,6 @@ class T5FineTuner(pl.LightningModule):
         loss = self._step(batch)
 
         tensorboard_logs = {"train_loss": loss}
-        self.log('loss',loss,on_step=True,on_epoch=True,prog_bar=True,Tlogger=True)
         return {"loss": loss, "log": tensorboard_logs}
 
     def training_epoch_end(self, outputs):
@@ -294,12 +291,12 @@ if __name__ == '__main__':
             callbacks=[LoggingCallback()],
         )
 
-        trainer = pl.Trainer(**train_params,logger= Tlogger)
+        trainer = pl.Trainer(**train_params)
         trainer.fit(model)
 
         # save the final model
-        # model.model.save_pretrained(args.output_dir)
-        # tokenizer.save_pretrained(args.output_dir)
+        model.model.save_pretrained(args.output_dir)
+        tokenizer.save_pretrained(args.output_dir)
 
         print("Finish training and saving the model!")
 
