@@ -118,7 +118,7 @@ def get_transformed_io(data_path, data_dir):
     """
     The main function to transform input & target according to the task
     """
-    sents, labels = read_line_examples_from_file(data_path)
+    sents, labels = read_line_examples_from_file(data_path,0)
 
     # the input is just the raw sentence
     inputs = [s.copy() for s in sents]
