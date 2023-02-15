@@ -311,7 +311,7 @@ if __name__ == '__main__':
         # print("Reload the model")
         # model.model.from_pretrained(args.output_dir)
 
-        sents, _ = read_line_examples_from_file(f'data/{args.dataset}/test.txt')
+        sents, _ = read_line_examples_from_file(f'data/{args.dataset}/test.txt',0)
 
         print()
         test_dataset = ABSADataset(tokenizer, data_dir=args.dataset, 
@@ -350,7 +350,7 @@ if __name__ == '__main__':
 
         model = T5FineTuner(args, tfm_model, tokenizer)
 
-        sents, _ = read_line_examples_from_file(f'data/{args.dataset}/test.txt')
+        sents, _ = read_line_examples_from_file(f'data/{args.dataset}/test.txt',0)
 
         print()
         test_dataset = ABSADataset(tokenizer, data_dir=args.dataset, 
